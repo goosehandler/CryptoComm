@@ -7,6 +7,13 @@ from cryptography.hazmat.primitives.kdf.hkdf import HKDF
 from cryptography.hazmat.primitives import hashes
 from cryptography.hazmat.primitives.ciphers.aead import AESGCM
 from cryptography.hazmat.primitives import serialization
+from cryptography import x509
+
+with open("certificate_Dima.pem", "rb") as f:
+    server_cert = f.read()
+
+with open("private_key_Dima.pem", "rb") as f:
+    private_key = serialization.load_pem_private_key(f.read(), password=None)
 
 HOST = "0.0.0.0"
 PORT = 8989
@@ -28,6 +35,17 @@ while True:
 
     conn, addr = server_socket.accept()
     print(f"[+] Connection established with {addr}")
+
+    conn.sendall(server_cert)
+    client_cert = conn.recv(4096)
+    
+    try:
+        x509.load_pem_x509_certificate(client_cert)
+        print("[*] Client's certificate verified.")
+    except Exception as e:
+        print(f"[-] Certificate verification failed: {e}")
+        conn.close()
+        exit()
 
     conn.sendall(public_key)
     alice_public_key_der = conn.recv(1024)
