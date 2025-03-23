@@ -7,6 +7,13 @@ from cryptography.hazmat.primitives.kdf.hkdf import HKDF
 from cryptography.hazmat.primitives import hashes
 from cryptography.hazmat.primitives.ciphers.aead import AESGCM
 from cryptography.hazmat.primitives import serialization
+from cryptography import x509
+
+with open("certificate_Alex.pem", "rb") as f:
+    client_cert = f.read()
+
+with open("private_key_Alex.pem", "rb") as f:
+    private_key = serialization.load_pem_private_key(f.read(), password=None)
 
 SERVER_IP = "10.16.116.124"
 PORT = 8989
@@ -22,6 +29,17 @@ for i in range(1):
     client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     client_socket.connect((SERVER_IP, PORT))
     print(f"[*] Connected to server at {SERVER_IP}:{PORT}")
+
+    server_cert = client_socket.recv(4096)
+    client_socket.sendall(client_cert)
+    
+    try:
+        x509.load_pem_x509_certificate(server_cert)
+        print("[*] Server's certificate verified.")
+    except Exception as e:
+        print(f"[-] Certificate verification failed: {e}")
+        client_socket.close()
+        exit()
 
     server_public_key_der = client_socket.recv(1024)
     client_socket.sendall(public_key)
